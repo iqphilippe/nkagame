@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>DTS Snake Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <style>
+    /* General styling for full-page layout */
+    html, body {
+      height: 100%;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: silver;
+      color: black;
+      font-family: Arial, sans-serif;
+    }
+    
+    h1 {
+      margin-bottom: 10px;
+    }
+    
+    .scoreboard {
+      margin-bottom: 10px;
+      font-size: 18px;
+    }
+    
+    .ipod-container {
+      width: 350px;
+      height: 600px;
+      background: black;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 40px;
+      border: 2px solid black;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      padding: 20px;
+      position: relative;
+    }
+    
+    .screen {
+      width: 300px;
+      height: 300px;
+      background: #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      border: 5px solid black;
+      position: relative;
+      top: -100px;
+    }
+    
+    canvas {
+      background: #333;
+      width: 280px;
+      height: 280px;
+    }
+    
+    .click-wheel {
+      width: 200px;
+      height: 200px;
+      background: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: absolute;
+      bottom: 30px;
+      border: 3px solid black;
+    }
+    
+    .center-button {
+      width: 60px;
+      height: 60px;
+      background: black;
+      border-radius: 50%;
+    }
+  </style>
+</head>
+<body>
+  <h1>DTS Snake Game</h1>
+  <div class="scoreboard">Score: <span id="score">0</span> | High Score: <span id="highscore">0</span></div>
+  <div class="ipod-container">
+    <div class="screen">
+      <canvas width="280" height="280" id="game"></canvas>
+    </div>
+    <div class="click-wheel">
+      <div class="center-button"></div>
+    </div>
+  </div>
+  <script>
+    var canvas = document.getElementById('game');
+    var context = canvas.getContext('2d');
+    var grid = 10;
+    var count = 0;
+    var score = 0;
+    var highScore = localStorage.getItem('highscore') || 0;
+    document.getElementById('highscore').innerText = highScore;
+    
+    var snake = {
+      x: 100,
+      y: 100,
+      dx: grid,
+      dy: 0,
+      cells: [],
+      maxCells: 4
+    };
+    var apple = {
+      x: 160,
+      y: 160
+    };
+
+    function getRandomInt(min, max) {
+      return Math.floor(Math.random() * (max - min)) + min;
+    }
+
+    function loop() {
+      requestAnimationFrame(loop);
+      if (++count < 4) {
+        return;
+      }
+      count = 0;
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      
+      snake.x += snake.dx;
+      snake.y += snake.dy;
+      
+      if (snake.x < 0) snake.x = canvas.width - grid;
+      else if (snake.x >= canvas.width) snake.x = 0;
+      if (snake.y < 0) snake.y = canvas.height - grid;
+      else if (snake.y >= canvas.height) snake.y = 0;
+      
+      snake.cells.unshift({ x: snake.x, y: snake.y });
+      if (snake.cells.length > snake.maxCells) {
+        snake.cells.pop();
+      }
+      
+      context.fillStyle = 'red';
+      context.fillRect(apple.x, apple.y, grid-1, grid-1);
+      
+      context.fillStyle = 'green';
+      snake.cells.forEach(function(cell, index) {
+        context.fillRect(cell.x, cell.y, grid-1, grid-1);
+        if (cell.x === apple.x && cell.y === apple.y) {
+          snake.maxCells++;
+          score++;
+          document.getElementById('score').innerText = score;
+          if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('highscore', highScore);
+            document.getElementById('highscore').innerText = highScore;
+          }
+          apple.x = getRandomInt(0, 28) * grid;
+          apple.y = getRandomInt(0, 28) * grid;
+        }
+      });
+    }
+
+    document.addEventListener('keydown', function(e) {
+      if (e.which === 37 && snake.dx === 0) {
+        snake.dx = -grid;
+        snake.dy = 0;
+      }
+      else if (e.which === 38 && snake.dy === 0) {
+        snake.dy = -grid;
+        snake.dx = 0;
+      }
+      else if (e.which === 39 && snake.dx === 0) {
+        snake.dx = grid;
+        snake.dy = 0;
+      }
+      else if (e.which === 40 && snake.dy === 0) {
+        snake.dy = grid;
+        snake.dx = 0;
+      }
+    });
+    
+    document.addEventListener('touchstart', handleTouchStart, false);
+    document.addEventListener('touchmove', handleTouchMove, false);
+    let xStart = null;
+    let yStart = null;
+    
+    function handleTouchStart(evt) {
+        xStart = evt.touches[0].clientX;
+        yStart = evt.touches[0].clientY;
+    }
+    
+    function handleTouchMove(evt) {
+        if (!xStart || !yStart) return;
+        let xDiff = evt.touches[0].clientX - xStart;
+        let yDiff = evt.touches[0].clientY - yStart;
+        if (Math.abs(xDiff) > Math.abs(yDiff)) {
+            snake.dx = xDiff > 0 ? grid : -grid;
+            snake.dy = 0;
+        } else {
+            snake.dy = yDiff > 0 ? grid : -grid;
+            snake.dx = 0;
+        }
+        xStart = null;
+        yStart = null;
+    }
+    
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
